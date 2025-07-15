@@ -42,9 +42,19 @@ def store_query(data, response_text):
 def chat():
     try:
         data = request.get_json()
-       
+        
+        allowed_keywords = [
+            "travel", "trip", "itinerary", "vacation", "holiday", "place", 
+            "tour", "destination", "stay", "hotel", "food", "budget", 
+            "days", "location", "guide", "tourist", "explore", "plan"
+        ]
+
         if 'prompt' in data and data['prompt'].strip():
-            prompt = data['prompt']
+            prompt = data['prompt'].lower()
+
+            if not any(keyword in prompt for keyword in allowed_keywords):
+                return jsonify({"response": "Sorry, I can only help with travel-related queries like planning trips, destinations, itineraries, etc."})
+
         else:
             destination = data.get("destination", "Kashmir")
             days = data.get("days", "5")
@@ -58,24 +68,21 @@ def chat():
 
         payload = {
             "model": "meta-llama/llama-3-8b-instruct",
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            # "max_tokens": 300
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 300
         }
 
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         result = response.json()
-
         reply = result["choices"][0]["message"]["content"]
-        
-       
+
         store_query(data, reply)
-        
         return jsonify({"response": reply})
 
     except Exception as e:
         return jsonify({"response": f"Error: {str(e)}"}), 500
+
+
 
 @app.route('/admin/queries', methods=['GET'])
 def get_queries():
